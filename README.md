@@ -1,9 +1,8 @@
 # ons-dsc-cloudbuild-utils
 
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/ONSdigital/ons-dsc-cloudbuild-utils/CI)](https://github.com/ONSdigital/ons-dsc-cloudbuild-utils/actions)
+[![CI](https://github.com/ONSdigital/ons-dsc-cloudbuild-utils/actions/workflows/ci.yml/badge.svg)](https://github.com/ONSdigital/ons-dsc-cloudbuild-utils/actions/workflows/ci.yml)
 [![pre-commit enabled](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://pre-commit.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Checkov](https://www.bridgecrew.cloud/badges/github/ONSdigital/ons-dsc-cloudbuild-utils.svg)](https://www.bridgecrew.cloud)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 
 Utilities and helpers for Google Cloud Build automation, including bash scripts and YAML workflows. Ensures best practices for authentication, secrets detection, and commit message standards.
