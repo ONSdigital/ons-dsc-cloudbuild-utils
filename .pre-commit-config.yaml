@@ -1,0 +1,46 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v5.0.0
+  hooks:
+  -   id: trailing-whitespace # strip out white spaces at end of lines
+      stages: [pre-commit]
+      exclude: (?i)changelog.*|package\.json
+  -   id: end-of-file-fixer # ensure newline present at end of file
+      stages: [pre-commit]
+      exclude: (?i)changelog.*|package\.json
+  -   id: check-yaml # checks yaml files for parseable syntax.
+      types: [yaml]
+      stages: [pre-commit]
+      args: ['--allow-multiple-documents']
+  -   id: check-json # checks json files for parseable syntax
+      stages: [pre-commit]
+      types: [json]
+  -   id: check-added-large-files # check for files above certain size (as likely to be data files)
+      stages: [pre-commit]
+      args: ['--maxkb=500']
+  -   id: detect-private-key # detects the presence of private keys.
+      stages: [pre-commit]
+  -   id: check-case-conflict # check for files that would conflict in case-insensitive file systems.
+      stages: [pre-commit]
+  -   id: check-merge-conflict # check for files that contain merge conflict strings.
+      stages: [pre-commit]
+- repo: https://github.com/compilerla/conventional-pre-commit
+  rev: v4.2.0
+  hooks:
+  -   id: conventional-pre-commit
+      stages: [commit-msg]
+-   repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        stages: [pre-commit]
+        exclude: package.lock.json
+        args:
+          - --baseline
+          - .configs/.secrets.baseline
+- repo: https://github.com/bridgecrewio/checkov
+  rev: 3.2.457
+  hooks:
+    - id: checkov
+      args: [--quiet]
+      stages: [pre-commit]
