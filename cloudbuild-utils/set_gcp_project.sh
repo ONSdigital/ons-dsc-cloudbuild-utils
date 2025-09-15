@@ -1,6 +1,9 @@
 #!/bin/bash
 # Helper to set the active GCP project in gcloud and for application-default credentials
 # Usage: set_gcp_project <project_id>
+
+source "$(dirname "$0")/messages.sh"
+
 set_gcp_project() {
   update_msg "Setting project to ${1}..."
   if [[ "$(gcloud config get-value project 2>/dev/null)" == "$1" ]]; then
