@@ -1,8 +1,12 @@
+
+
 RED=$'\033[0;31m'
 NC=$'\033[0m'
 GREEN=$'\033[0;32m'
 BLUE=$'\033[0;34m'
 YELLOW=$'\033[0;33m'
+BOLD=$'\033[1m'
+UNBOLD=$'\033[22m'
 
 
 ###############################################################################
@@ -23,7 +27,7 @@ update_msg() {
   local color="$2"
   local out_stream="$3"
   local type="$4"
-  printf "%s[%s] [%s]: %s%s\n" "$color" "$(date +'%Y-%m-%dT%H:%M:%S%z')" "$type" "$message" "$NC" >&$out_stream
+  printf "%s[%s] %s[%s]%s: %s%s\n" "$color" "$(date +'%Y-%m-%dT%H:%M:%S%z')" "$BOLD" "$type" "$UNBOLD" "$message" "$NC" >&$out_stream
 }
 
 ###############################################################################
