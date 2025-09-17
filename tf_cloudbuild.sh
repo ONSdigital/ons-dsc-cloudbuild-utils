@@ -1,8 +1,8 @@
 #!/bin/bash
 # Import utility functions
-source "$(dirname "$0")/messages.sh"
-source "$(dirname "$0")/gcp_login.sh"
-source "$(dirname "$0")/set_gcp_project.sh"
+source "$(dirname "$0")/src/logging.sh"
+source "$(dirname "$0")/src/gcp_login.sh"
+source "$(dirname "$0")/src/set_gcp_project.sh"
 
 # Ensure the script exits on any error
 set -e
@@ -74,9 +74,9 @@ for output in "${outputs[@]}"; do
 
   # print tf_state_bucket_name excluding the first 16 chars, otherwise normal output
   if [[ "$output" == "tf_state_bucket_name" ]]; then
-    update_msg "Setting variable ${var_name} to: XXXXXXXXXXXXXXXX${value:16} (sensitive first 16 chars)"
+    info_msg "Setting variable ${var_name} to: XXXXXXXXXXXXXXXX${value:16} (sensitive first 16 chars)"
   else
-    update_msg "Setting variable ${var_name} to: ${value}"
+    info_msg "Setting variable ${var_name} to: ${value}"
   fi
 done
 
@@ -84,13 +84,13 @@ gcp_login
 set_gcp_project "$PROJECT_ID"
 
 if [[ "$METHOD" == "plan" ]]; then
-  update_msg "This will run a Terraform plan in the ${PROJECT_ID} ${GCP_ENV} environment. Do you want to continue? (TYPE 'y' TO CONTINUE): "
+  info_msg "This will run a Terraform plan in the ${PROJECT_ID} ${GCP_ENV} environment. Do you want to continue? (TYPE 'y' TO CONTINUE): "
   read -n 1 -s confirm
   if [[ "${confirm,,}" != "y" ]]; then
     error_msg "Operation cancelled by user."
     exit 1
   fi
-  update_msg "Handing over to Google Cloud Build..."
+  info_msg "Handing over to Google Cloud Build..."
   gcloud builds submit --config="./configs/build_configs/plan.cloudbuild.yaml" \
     --substitutions=_GCP_ENV=$GCP_ENV,_TF_STATE_BUCKET_NAME=$TF_STATE_BUCKET_NAME,_TF_PLANS_BUCKET=$TF_PLANS_BUCKET \
     --region $REGION \
@@ -99,7 +99,7 @@ if [[ "$METHOD" == "plan" ]]; then
     --gcs-source-staging-dir "gs://${TF_CLOUD_BUILD_SOURCE_BUCKET}/plan" \
     --ignore-file="$REPO_ROOT/.gcloudignore"
 elif [[ "$METHOD" == "apply" ]]; then
-  update_msg "This will run a Terraform apply in the ${PROJECT_ID} ${GCP_ENV} environment. Do you want to continue? (TYPE 'y' TO CONTINUE): "
+  info_msg "This will run a Terraform apply in the ${PROJECT_ID} ${GCP_ENV} environment. Do you want to continue? (TYPE 'y' TO CONTINUE): "
   read -n 1 -s confirm
   if [[ "${confirm,,}" != "y" ]]; then
     error_msg "Operation cancelled by user."
@@ -112,7 +112,7 @@ elif [[ "$METHOD" == "apply" ]]; then
     exit 1
   fi
 
-  update_msg "Handing over to Google Cloud Build..."
+  info_msg "Handing over to Google Cloud Build..."
   gcloud builds submit --config="./configs/build_configs/apply.cloudbuild.yaml" \
     --substitutions=_GCP_ENV=$GCP_ENV,_TF_STATE_BUCKET_NAME=$TF_STATE_BUCKET_NAME \
     --region $REGION \

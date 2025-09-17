@@ -1,3 +1,16 @@
+###############################################################################
+# logging.sh - Utility functions for standardized script messaging
+#-------------------------------------------------------------------------------
+# Provides functions for printing info, warning, error, success, and debug
+# messages in a consistent format across scripts in this repo.
+#
+# Usage:
+#   source logging.sh
+#   info_msg "This is an info message."
+#   error_msg "This is an error message."
+#
+# Used by all major scripts to improve readability and maintainability.
+###############################################################################
 
 
 RED=$'\033[0;31m'
@@ -27,7 +40,15 @@ update_msg() {
   local color="$2"
   local out_stream="$3"
   local type="$4"
-  printf "%s[%s] %s[%s]%s: %s%s\n" "$color" "$(date +'%Y-%m-%dT%H:%M:%S%z')" "$BOLD" "$type" "$UNBOLD" "$message" "$NC" >&$out_stream
+  # Use echo -e to interpret newlines in message
+  local timestamp="$(date +'%Y-%m-%dT%H:%M:%S%z')"
+  if [[ "$message" == *$'\n'* ]]; then
+    # Multi-line message: print header, then message
+    echo -e "${color}[${timestamp}] ${BOLD}[${type}]${UNBOLD}:${NC}" >&$out_stream
+    echo -e "$message" >&$out_stream
+  else
+    echo -e "${color}[${timestamp}] ${BOLD}[${type}]${UNBOLD}: $message${NC}" >&$out_stream
+  fi
 }
 
 ###############################################################################
