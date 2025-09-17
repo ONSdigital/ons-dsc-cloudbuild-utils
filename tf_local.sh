@@ -18,7 +18,7 @@
 # Source utility scripts
 source "$(dirname "$0")/src/gcp_utilities.sh"
 source "$(dirname "$0")/src/input_validation.sh"
-source "$(dirname "$0")/src/link_state_bucket.sh"
+source "$(dirname "$0")/src/link_buckets.sh"
 source "$(dirname "$0")/src/logging.sh"
 source "$(dirname "$0")/src/run_terraform.sh"
 source "$(dirname "$0")/src/secret_vars.sh"
@@ -38,11 +38,25 @@ done
 
 GCP_ENV="$1"
 METHOD="$2"
+BUILD_ID="$3"
 
 # Input validation
-validate_arg --value="$GCP_ENV" --arg_name=gcp_env --allowed="sandbox|dev|staging|prod" --caller='bash tf_local.sh' --arg_map="{gcp_env} {method}"
-validate_arg --value="$METHOD" --arg_name=method --allowed="plan|apply" --caller='bash tf_local.sh' --arg_map="{gcp_env} {method}"
+validate_arg --value="$GCP_ENV" --arg_name=gcp_env --allowed="sandbox|dev|staging|prod" --caller='bash tf_local.sh' --arg_map="{gcp_env} {method} {optional: build_id}"
+validate_arg --value="$METHOD" --arg_name=method --allowed="plan|apply" --caller='bash tf_local.sh' --arg_map="{gcp_env} {method} {optional: build_id}"
+
+if [ "$METHOD" = "apply" ]; then
+  if [ -z "$BUILD_ID" ]; then
+    error_msg "A build_id argument is required when method is 'apply'. Usage: 'bash tf_local.sh {gcp_env} apply {build_id}'"
+    exit 1
+  fi
+  validate_regex --value="$BUILD_ID" --arg_name="build_id" --regex="^[0-9]{4}-[0-9]{2}-[0-9]{2}__[a-zA-Z0-9]{6}$" --caller="bash tf_local.sh" --arg_map="{gcp_env} apply {build_id}"
+elif [ -n "$BUILD_ID" ]; then
+  warning_msg "A build_id argument is only used when method is 'apply'. It will be ignored."
+fi
+
+
 PROJECT_ID="$(get_project_id "$GCP_ENV")"
+echo "Using project_id: $PROJECT_ID"
 confirm_gcp_project_interactive
 
 # Link the Terraform remote state bucket
@@ -52,4 +66,4 @@ link_remote_state_bucket
 VAR_ARGS=( $(build_var_args) )
 
 # Run the Terraform command locally
-run_terraform_local $METHOD
+run_terraform_local $METHOD $BUILD_ID

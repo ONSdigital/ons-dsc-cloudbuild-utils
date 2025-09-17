@@ -51,18 +51,60 @@ validate_arg() {
 
     # If value is not allowed, print error and return 1, else return 0
     if [[ ! "$allowed" =~ (^|[|])"$value"($|[|]) ]]; then
-        error_msg \
-"\n==================== ERROR ====================\n \
-[!] Invalid value for argument '$arg_name'\n \
-    You provided: '$value'\n \
-    Allowed values: $allowed\n \
-----------------------------------------------\n \
-Correct Invocation: '$caller $arg_map'\n \
-============================================== \n \n \
-Tip: Check your input and try again. Refer to the invocation format above."
+        error_msg "==================== ERROR ===================="
+        error_msg "[!] Invalid value for argument '$arg_name'"
+        error_msg "    You provided: '$value'"
+        error_msg "    Allowed values: $allowed"
+        error_msg "----------------------------------------------"
+        error_msg "Correct Invocation: '$caller $arg_map'"
+        error_msg "=============================================="
+        error_msg "Tip: Check your input and try again. Refer to the invocation format above."
         return 1
     fi
-    info_msg "Selected $arg_name: '$value'"
     return 0
 }
 
+validate_regex() {
+    local value=""
+    local arg_name=""
+    local regex=""
+    local caller=""
+    local arg_map=""
+
+    # Parse flags
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --value=*)
+                value="${1#*=}"
+                ;;
+            --arg_name=*)
+                arg_name="${1#*=}"
+                ;;
+            --regex=*)
+                regex="${1#*=}"
+                ;;
+            --caller=*)
+                caller="${1#*=}"
+                ;;
+            --arg_map=*)
+                arg_map="${1#*=}"
+                ;;
+        esac
+        shift
+    done
+
+    # If value does not match regex, print error and return 1, else return 0
+    if [[ ! "$value" =~ $regex ]]; then
+        error_msg "==================== ERROR ===================="
+        error_msg "[!] Invalid format for argument '$arg_name'"
+        error_msg "    You provided: '$value'"
+        error_msg "    Expected format: $regex"
+        error_msg "----------------------------------------------"
+        error_msg "Correct Invocation: '$caller $arg_map'"
+        error_msg "=============================================="
+        error_msg "Tip: Check your input and try again. Refer to the invocation format above."
+        return 1
+    fi
+    info_msg "Selected $arg_name: '$value'" >&2
+    return 0
+}   

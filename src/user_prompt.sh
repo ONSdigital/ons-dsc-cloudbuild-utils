@@ -10,9 +10,9 @@
 # Returns:
 #   0 if user confirms, 1 if cancelled.
 confirm_with_prompt() {
-  for line in "$@"; do
-    info_msg "$line"
-  done
+  local prompt_msg
+  prompt_msg="$(printf "%s\n" "$@")"
+  confirm_msg "$prompt_msg"
   read confirm
   confirm_char="$(echo "$confirm" | cut -c1 | tr '[:upper:]' '[:lower:]')"
   if [ "$confirm_char" != "y" ]; then

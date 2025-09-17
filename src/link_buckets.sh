@@ -1,12 +1,11 @@
-
 ###############################################################################
-# link_state_bucket.sh - Utilities for managing Terraform remote state in GCP
+# link_buckets.sh - Utilities for managing Terraform remote state in GCP
 #-------------------------------------------------------------------------------
 # Provides functions to detect, link, and bootstrap the Terraform remote state
 # bucket, including migration from local to remote state and backend setup.
 #
 # Usage:
-#   source link_state_bucket.sh
+#   source link_buckets.sh
 #   link_remote_state_bucket
 #
 # Used by automation scripts to ensure remote state is correctly configured and
@@ -18,34 +17,34 @@ source "$script_dir/logging.sh"
 source "$script_dir/user_prompt.sh"
 
 ###############################################################################
-# get_remote_state_bucket_name
+# get_bucket_name
 #-------------------------------------------------------------------------------
-# Finds and returns the name of the Terraform remote state bucket in GCP.
+# Finds and returns the name of a GCP bucket matching the given pattern.
 #
 # Args:
-#   None.
+#   name_pattern: Pattern to search for in bucket names.
 #
 # Returns:
-#   Prints the bucket name to stdout if found.
+#   Prints the bucket name (without gs:// prefix) to stdout if found, returns 0 if not found.
 #
 # Raises:
-#   Prints an error and returns 1 if no matching bucket is found.
-get_remote_state_bucket_name() {
-  local name_pattern="tf-state-remote-backend"
+#   Prints a warning if no matching bucket is found.
+get_bucket_name() {
+  local name_pattern
   local all_buckets
+  name_pattern="$1"
   all_buckets=$(gsutil ls 2>/dev/null)
-  info_msg "Checking for remote state bucket with pattern: $name_pattern" >&2
+  info_msg "Searching for bucket matching pattern: $name_pattern" >&2
   if echo "$all_buckets" | grep -q "$name_pattern"; then
     local bucket_name
     bucket_name=$(echo "$all_buckets" | grep "$name_pattern" | head -n1)
-    info_msg "Remote state bucket found: $bucket_name" >&2
-    success_msg "Found remote state bucket" >&2
+    info_msg "Matching Bucket found" >&2
     # Clean the bucket name: remove gs:// prefix and trailing slash
     local clean_bucket_name="${bucket_name#gs://}"
     clean_bucket_name="${clean_bucket_name%/}"
     echo "$clean_bucket_name"
   else
-    warning_msg "No remote state bucket found matching pattern" >&2
+    warning_msg "No bucket found matching pattern" >&2
     return 0
   fi
 }
@@ -56,45 +55,43 @@ get_remote_state_bucket_name() {
 # Exports the TF_VAR_tf_remote_state_bucket environment variable for Terraform.
 #
 # Args:
-#   bucket_name: Remote state bucket name (plain name, no gs:// prefix).
+#   None. Uses get_remote_state_bucket_name internally.
 #
 # Returns:
-#   None.
+#   0 on success.
 #
 # Raises:
 #   None.
 export_tf_remote_state_bucket() {
   local bucket_name
-  bucket_name=$(get_remote_state_bucket_name)
+  bucket_name=$(get_bucket_name "tf-state-remote-backend")
   export TF_VAR_tf_remote_state_bucket="$bucket_name"
   print_tf_var_remote_state_bucket_debug
-  success_msg "TF_VAR_tf_remote_state_bucket set successfully." >&2
+  info_msg "TF_VAR_tf_remote_state_bucket set successfully." >&2
   return 0
 }
 
 
 
 ###############################################################################
-# set_and_init_bucket
+# init_remote_state
 #-------------------------------------------------------------------------------
-# Cleans and sets the remote state bucket environment variable, prints debug info,
-# and runs terraform init to initialize the remote state backend.
+# Initializes the Terraform remote state backend using the bucket specified in
+# TF_VAR_tf_remote_state_bucket. Runs 'terraform init' with the backend config.
 #
 # Args:
-#   raw_bucket_name: (required) Remote state bucket name (gs:// URI or plain name).
+#   None. Uses TF_VAR_tf_remote_state_bucket from environment.
 #
 # Returns:
 #   0 on success.
 #
 # Raises:
-#   Prints error and exits if no bucket name is provided, or returns 1 on terraform init failure.
-set_and_init_bucket() {
-  export_tf_remote_state_bucket
-  terraform init -backend-config="bucket=$TF_VAR_tf_remote_state_bucket" || {
+#   Prints error and returns 1 if terraform init fails or bucket is not set.
+init_remote_state() {
+    terraform init -backend-config="bucket=$TF_VAR_tf_remote_state_bucket" || {
     return 1
   }
 }
-
 
 ###############################################################################
 # is_first_time_setup
@@ -134,8 +131,6 @@ print_tf_var_remote_state_bucket_debug() {
   fi
 }
 
-
-
 ###############################################################################
 # required_tf_files_exist
 #-------------------------------------------------------------------------------
@@ -164,6 +159,7 @@ required_tf_files_exist() {
 #
 # Raises:
 #   Prints error messages and returns 1 on failure.
+#   Also creates backend.tf and migrates state in both temp and main directory.
 run_isolated_tf_setup() {
   local files=(setup.tf providers.tf variables.tf config.auto.tfvars)
   local tmp_dir=$(mktemp -d)
@@ -187,6 +183,11 @@ run_isolated_tf_setup() {
     rm -rf "$tmp_dir"
     return 1
   }
+  info_msg "Creating backend.tf with backend block for remote state." >&2
+  create_backend_tf_with_block
+  export_tf_remote_state_bucket
+  migrate_local_state_to_remote
+  info_msg "Remote state backend configured successfully." >&2
   popd > /dev/null
   rm -rf "$tmp_dir"
 }
@@ -222,7 +223,7 @@ terraform {
   backend "$backend_type" {}
 }
 EOF
-    success_msg "Created $backend_file with backend block for $backend_type."
+    info_msg "Created $backend_file with backend block for $backend_type."
     return 0
   fi
 }
@@ -239,16 +240,15 @@ EOF
 #   0 on success, 1 on failure.
 migrate_local_state_to_remote() {
   info_msg "Migrating local Terraform state to remote backend..." >&2
-  local bucket_name="$TF_VAR_tf_remote_state_bucket"
-  if [[ -z "$bucket_name" ]]; then
+  if [[ -z "$TF_VAR_tf_remote_state_bucket" ]]; then
     error_msg "TF_VAR_tf_remote_state_bucket is not set. Cannot migrate state." >&2
     return 1
   fi
-  terraform init -migrate-state -backend-config="bucket=${bucket_name}" || {
+  terraform init -migrate-state -backend-config="bucket=${TF_VAR_tf_remote_state_bucket}" || {
     error_msg "State migration to remote backend failed." >&2
     return 1
   }
-  success_msg "Terraform state successfully migrated to remote backend." >&2
+  info_msg "Terraform state successfully migrated to remote backend." >&2
 }
 
 ###############################################################################
@@ -272,6 +272,8 @@ prompt_local_state_bootstrap_confirmation() {
     "This script will now bootstrap remote state by:" \
     "  1. Running an initial local terraform apply to create the required remote state bucket(s)." \
     "  2. Migrating the local state to the remote bucket once created." \
+    "You will see progress updates and status messages as the remote state is being set up." \
+    "This may take a few moments, and you may be prompted for additional input if required." \
     "Do you want to continue? Type 'y' or 'Y' and press Enter to continue." \
     "==========================================================="
   return $?
@@ -282,8 +284,7 @@ prompt_local_state_bootstrap_confirmation() {
 #-------------------------------------------------------------------------------
 # Performs first-time Terraform setup locally (no backend), applies initial
 # resources using setup.tf, providers.tf, variables.tf, and config.auto.tfvars,
-# and then updates providers.tf to add a backend block for remote state.
-# Intended for bootstrapping remote state when no remote state bucket exists.
+# and then creates backend.tf for remote state. Intended for bootstrapping remote state when no remote state bucket exists.
 #
 # Args:
 #   None.
@@ -302,11 +303,6 @@ init_and_configure_remote_state() {
   if required_tf_files_exist; then
     info_msg "Required Terraform files found. Running isolated setup." >&2
     run_isolated_tf_setup
-    info_msg "Creating backend.tf with backend block for remote state." >&2
-    create_backend_tf_with_block
-    export_tf_remote_state_bucket
-    migrate_local_state_to_remote
-    success_msg "Remote state backend configured successfully." >&2
     return 0
   else
     error_msg "setup.tf, providers.tf, or variables.tf not found." >&2
@@ -318,7 +314,7 @@ init_and_configure_remote_state() {
 # link_remote_state_bucket
 #-------------------------------------------------------------------------------
 # Detects the Terraform remote state bucket and delegates initialisation to
-# set_and_init_bucket, which handles both remote and local (first-time) setup.
+# init_remote_state (for existing backend) or init_and_configure_remote_state (for first-time setup).
 #
 # Args:
 #   None.
@@ -331,8 +327,12 @@ init_and_configure_remote_state() {
 link_remote_state_bucket() {
   if is_first_time_setup; then
     init_and_configure_remote_state
+    create_backend_tf_with_block
+    init_remote_state
   else
     info_msg "Starting remote state bucket linking workflow." >&2
-    set_and_init_bucket
+    export_tf_remote_state_bucket
+    init_remote_state
   fi
 }
+

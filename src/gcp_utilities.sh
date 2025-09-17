@@ -122,7 +122,7 @@ set_gcp_project() {
     gcloud config set project "$project_id" > /dev/null
     gcloud auth application-default set-quota-project "$project_id" > /dev/null
     if [[ $? -eq 0 ]]; then
-      success_msg "Project is set to ${project_id} successfully."
+      info_msg "Project is set to ${project_id} successfully."
     else
       error_msg "Failed to set project to ${project_id}."
       exit 1
@@ -153,7 +153,7 @@ confirm_gcp_project_interactive() {
     "Current GCP project is: $current_project." \
     "Is this correct? Type 'y' or 'Y' and press Enter to confirm." \
     "==========================================================="; then
-    success_msg "Project confirmation received: '$current_project' is set as the active GCP project."
+    info_msg "Project confirmation received: '$current_project' is set as the active GCP project."
   else
     exit 1
   fi
