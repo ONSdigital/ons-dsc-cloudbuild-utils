@@ -16,62 +16,6 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]:-${(%):-%x}}")" && pwd)"
 source "$script_dir/logging.sh"
 source "$script_dir/user_prompt.sh"
 
-###############################################################################
-# get_bucket_name
-#-------------------------------------------------------------------------------
-# Finds and returns the name of a GCP bucket matching the given pattern.
-#
-# Args:
-#   name_pattern: Pattern to search for in bucket names.
-#
-# Returns:
-#   Prints the bucket name (without gs:// prefix) to stdout if found, returns 0 if not found.
-#
-# Raises:
-#   Prints a warning if no matching bucket is found.
-get_bucket_name() {
-  local name_pattern
-  local all_buckets
-  name_pattern="$1"
-  all_buckets=$(gsutil ls 2>/dev/null)
-  info_msg "Searching for bucket matching pattern: $name_pattern" >&2
-  if echo "$all_buckets" | grep -q "$name_pattern"; then
-    local bucket_name
-    bucket_name=$(echo "$all_buckets" | grep "$name_pattern" | head -n1)
-    info_msg "Matching Bucket found" >&2
-    # Clean the bucket name: remove gs:// prefix and trailing slash
-    local clean_bucket_name="${bucket_name#gs://}"
-    clean_bucket_name="${clean_bucket_name%/}"
-    echo "$clean_bucket_name"
-  else
-    warning_msg "No bucket found matching pattern" >&2
-    return 0
-  fi
-}
-
-#-------------------------------------------------------------------------------
-# export_tf_remote_state_bucket
-#-------------------------------------------------------------------------------
-# Exports the TF_VAR_tf_remote_state_bucket environment variable for Terraform.
-#
-# Args:
-#   None. Uses get_remote_state_bucket_name internally.
-#
-# Returns:
-#   0 on success.
-#
-# Raises:
-#   None.
-export_tf_remote_state_bucket() {
-  local bucket_name
-  bucket_name=$(get_bucket_name "tf-state-remote-backend")
-  export TF_VAR_tf_remote_state_bucket="$bucket_name"
-  print_tf_var_remote_state_bucket_debug
-  info_msg "TF_VAR_tf_remote_state_bucket set successfully." >&2
-  return 0
-}
-
-
 
 ###############################################################################
 # init_remote_state
@@ -335,4 +279,3 @@ link_remote_state_bucket() {
     init_remote_state
   fi
 }
-

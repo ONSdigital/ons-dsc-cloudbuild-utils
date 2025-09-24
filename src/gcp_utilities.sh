@@ -29,25 +29,17 @@ source "$script_dir/logging.sh"
 source "$script_dir/input_validation.sh"
 source "$script_dir/user_prompt.sh"
 
-# Check required commands
-for cmd in gcloud grep sed; do
-  if ! command -v "$cmd" >/dev/null 2>&1; then
-    error_msg "Required command '$cmd' not found. Please install it."
-    exit 2
-  fi
-done
-
 ###############################################################################
 # find_tfvars_file_with_project_id
 #-------------------------------------------------------------------------------
-# Searches for a Terraform variable file (*.auto*.tfvars) in the current directory
+# Searches for all Terraform variable files (*.auto*.tfvars) in the current directory
 # containing a 'project_id' assignment.
 #
 # Args:
 #   None.
 #
 # Returns:
-#   Prints the path to the tfvars file containing 'project_id' to stdout and returns 0 on success.
+#   Prints the paths to all tfvars files containing 'project_id' to stdout and returns 0 on success.
 #
 # Raises:
 #   Prints an error and exits with status 1 if no file is found.

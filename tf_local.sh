@@ -54,16 +54,12 @@ elif [ -n "$BUILD_ID" ]; then
   warning_msg "A build_id argument is only used when method is 'apply'. It will be ignored."
 fi
 
-
 PROJECT_ID="$(get_project_id "$GCP_ENV")"
 echo "Using project_id: $PROJECT_ID"
 confirm_gcp_project_interactive
 
-# Link the Terraform remote state bucket
-link_remote_state_bucket
 
-# Build variable arguments for Terraform commands
-VAR_ARGS=( $(build_var_args) )
+VAR_FILES=( $(build_var_file_args) )
 
 # Run the Terraform command locally
-run_terraform_local $METHOD $BUILD_ID
+run_terraform_local --project_id="$PROJECT_ID" --gcp_env="$GCP_ENV" --method="$METHOD" --build_id="$BUILD_ID" --var_files="${VAR_FILES[@]}"

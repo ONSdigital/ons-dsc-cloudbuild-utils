@@ -7,7 +7,7 @@
 #   Terraform CLI commands in automation scripts and local workflows.
 #
 # Usage:
-#   Source this file and call build_var_args to generate -var-file arguments
+#   Source this file and call build_var_file_args to generate -var-file arguments
 #   for all .tfvars files present. Integrates with other scripts to simplify
 #   variable management for Terraform operations.
 #
@@ -18,7 +18,7 @@
 
 
 ###############################################################################
-# build_var_args
+# build_var_file_args
 #-------------------------------------------------------------------------------
 # Builds an array of -var-file arguments for all .tfvars files in the current directory.
 #
@@ -31,7 +31,7 @@
 # Raises:
 #   None. If no .tfvars files are found, returns an empty string.
 ###############################################################################
-build_var_args() {
+build_var_file_args() {
   local tfvars_files=( $(find . -maxdepth 1 -name "*.tfvars") )
   local args=()
   for file in "${tfvars_files[@]}"; do
